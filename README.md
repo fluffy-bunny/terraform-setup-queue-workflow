@@ -1,5 +1,5 @@
 ![fluffy-bunny-banner](https://raw.githubusercontent.com/fluffy-bunny/static-assets/master/fluffy-bunny-banner.png)  
-# terraform-setup-azfunc-guidgen
+# terraform-setup-queue-workflow
 This project terraforms azure by providing everything needed to deploy the azFunc-guidgen function.  
 
 ## Prerequisite
