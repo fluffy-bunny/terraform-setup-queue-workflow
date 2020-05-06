@@ -50,8 +50,8 @@ variable "cosmosPrimaryKeyEmulator" {
   description = "(Required) The main cosmosPrimaryKeyEmulator.  "
   type        = string
 }
-variable "azFuncShorturlClientCredentials" {
-  description = "(Required) The main azFuncShorturlClientCredentials.  BASE64 encoded JSON "
+variable "azFuncQueueflowClientCredentials" {
+  description = "(Required) The main azFuncQueueflowClientCredentials.  BASE64 encoded JSON "
   type        = string
 }
 

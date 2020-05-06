@@ -4,7 +4,7 @@ terraform {
     # Do not declare an access_key here. Instead, export the
     # ARM_ACCESS_KEY environment variable.
 
-    storage_account_name  = "stterraformshorturl2"
+    storage_account_name  = "stterraformqueueflow"
     container_name        = "tstate"
     key                   = "terraform.tfstate"
   }
@@ -40,6 +40,10 @@ resource "azurerm_storage_account" "main" {
   account_replication_type = "LRS"
   tags = var.tags
 }
+resource "azurerm_storage_queue" "main" {
+  name                 = "queue-main"
+  storage_account_name = azurerm_storage_account.main.name
+}
 
 resource "azurerm_storage_container" "eventdump" {
   name                  = "ehub-dump"
@@ -53,11 +57,6 @@ resource "azurerm_storage_container" "checkpoint" {
   container_access_type = "private"
 }
 
-resource "azurerm_role_assignment" "blob_owner_to_principal" {
-  scope                = data.azurerm_subscription.primary.id
-  role_definition_name = "Storage Blob Data Owner"
-  principal_id         = data.azurerm_client_config.current.object_id
-}
 
 resource "azurerm_role_assignment" "sbdo_ste_principal" {
   scope                = azurerm_storage_account.main.id
@@ -197,45 +196,6 @@ resource "azurerm_key_vault" "main" {
    
 }
 
-resource "azurerm_cosmosdb_account" "db" {
-  name                      = var.cosmos_name
-  location                  = azurerm_resource_group.rg.location
-  resource_group_name       = azurerm_resource_group.rg.name
-  offer_type          = "Standard"
-  kind                = "GlobalDocumentDB"
-
-  consistency_policy {
-    consistency_level       = "BoundedStaleness"
-    max_interval_in_seconds = 10
-    max_staleness_prefix    = 200
-  }
-
-  geo_location {
-    prefix            = "shorturl2-customid"
-    location          = azurerm_resource_group.rg.location
-    failover_priority = 0
-  }
-  tags = var.tags
-}
-resource "azurerm_cosmosdb_sql_database" "sql_database" {
-  name                = "db-shortUrl"
-  resource_group_name = azurerm_cosmosdb_account.db.resource_group_name
-  account_name        = var.cosmos_name
-  throughput          = 400
-}
-
-resource "azurerm_cosmosdb_sql_container" "container_operational" {
-  name                = "operational"
-  resource_group_name = azurerm_cosmosdb_account.db.resource_group_name
-  account_name        = var.cosmos_name
-  database_name       = azurerm_cosmosdb_sql_database.sql_database.name
-  partition_key_path  = "/id"
-  throughput          = 400
-
-  default_ttl         = -1
-
-}
-
 resource "azurerm_key_vault_secret" "main_ste_primary_key" {
   name         = format("%s-primary-connection-string",azurerm_storage_account.main.name)
   value        = azurerm_storage_account.main.primary_connection_string
@@ -246,49 +206,9 @@ resource "azurerm_key_vault_secret" "main_ste_primary_key" {
   }
 } 
 
-resource "azurerm_key_vault_secret" "cosmosPrimaryKeyProduction" {
-  name         = "cosmosPrimaryKeyProduction"
-  value        = azurerm_cosmosdb_account.db.primary_master_key
-  key_vault_id = azurerm_key_vault.main.id
-
-  tags = {
-    environment = "Production"
-  }
-} 
-
-resource "azurerm_key_vault_secret" "cosmosPrimaryKeyEmulator" {
-  name         = "cosmosPrimaryKeyEmulator"
-  value        = var.cosmosPrimaryKeyEmulator
-  key_vault_id = azurerm_key_vault.main.id
-
-  tags = {
-    environment = "Production"
-  }
-} 
-
-resource "azurerm_key_vault_secret" "cosmosConfigTemplateEmulator" {
-  name         = "cosmosConfigTemplateEmulator"
-  value        = var.cosmosConfigTemplateEmulator
-  key_vault_id = azurerm_key_vault.main.id
-
-  tags = {
-    environment = "Dev"
-  }
-} 
-
-resource "azurerm_key_vault_secret" "cosmosConfigTemplateProduction" {
-  name         = "cosmosConfigTemplateProduction"
-  value        = var.cosmosConfigTemplateProduction
-  key_vault_id = azurerm_key_vault.main.id
-
-  tags = {
-    environment = "Production"
-  }
-} 
-
-resource "azurerm_key_vault_secret" "azFuncShorturlClientCredentials" {
-  name         = "azFuncShorturlClientCredentials"
-  value        = var.azFuncShorturlClientCredentials
+resource "azurerm_key_vault_secret" "azFuncQueueflowClientCredentials" {
+  name         = "azFuncQueueflowClientCredentials"
+  value        = var.azFuncQueueflowClientCredentials
   key_vault_id = azurerm_key_vault.main.id
 
   tags = {
