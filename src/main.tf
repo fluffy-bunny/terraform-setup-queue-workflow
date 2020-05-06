@@ -106,7 +106,8 @@ resource "azurerm_function_app" "main" {
     "WEBSITE_RUN_FROM_PACKAGE"                          = "1",
     "APPINSIGHTS_INSTRUMENTATIONKEY"                    = azurerm_application_insights.main.instrumentation_key,
     "APPLICATIONINSIGHTS_CONNECTION_STRING"             = format("InstrumentationKey=%s", azurerm_application_insights.main.instrumentation_key),
-    "FUNCTIONS_WORKER_RUNTIME"                          = "dotnet"
+    "FUNCTIONS_WORKER_RUNTIME"                          = "dotnet",
+    "ConnectionStringStorageAccount"                    = format("@Microsoft.KeyVault(SecretUri=%s)",azurerm_key_vault_secret.main_ste_primary_key.id)
   }
   version="~3"
   tags = var.tags
