@@ -322,3 +322,32 @@ resource "azurerm_key_vault_secret" "azurerm_eventhub_authorization_rule_sender_
     environment = "Dev"
   }
 } 
+resource "azurerm_servicebus_namespace" "main" {
+  name                = "sb-queueflow"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  sku                 = "Standard"
+
+  tags = {
+    source = "terraform"
+  }
+}
+resource "azurerm_servicebus_queue" "main" {
+  name                = "sbq-queueflow"
+  resource_group_name = azurerm_resource_group.rg.name
+  namespace_name      = azurerm_servicebus_namespace.main.name
+
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_topic" "main" {
+  name                = "sbt-queueflow"
+  resource_group_name = azurerm_resource_group.rg.name
+  namespace_name      = azurerm_servicebus_namespace.main.name
+
+  enable_partitioning = true
+}
+resource "azurerm_role_assignment" "sb_sbq_principal" {
+  scope                = azurerm_servicebus_queue.main.id
+  role_definition_name = "Azure Service Bus Data Owner"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
