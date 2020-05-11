@@ -40,6 +40,19 @@ resource "azurerm_storage_account" "main" {
   account_replication_type = "LRS"
   tags = var.tags
 }
+
+resource "azurerm_role_assignment" "sbdo_ste_principal" {
+  scope                = azurerm_storage_account.main.id
+  role_definition_name = "Storage Blob Data Owner"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+resource "azurerm_storage_container" "blob_basic" {
+  name                  = "blob-basic"
+  storage_account_name  = azurerm_storage_account.main.name
+  container_access_type = "private"
+}
+
 resource "azurerm_storage_queue" "main" {
   name                 = "queue-main"
   storage_account_name = azurerm_storage_account.main.name
@@ -58,11 +71,7 @@ resource "azurerm_storage_container" "checkpoint" {
 }
 
 
-resource "azurerm_role_assignment" "sbdo_ste_principal" {
-  scope                = azurerm_storage_account.main.id
-  role_definition_name = "Storage Blob Data Owner"
-  principal_id         = data.azurerm_client_config.current.object_id
-}
+
 resource "azurerm_app_service_plan" "main" {
   name                = var.plan_name
   location            = azurerm_resource_group.rg.location
@@ -107,12 +116,16 @@ resource "azurerm_function_app" "main" {
     "APPINSIGHTS_INSTRUMENTATIONKEY"                    = azurerm_application_insights.main.instrumentation_key,
     "APPLICATIONINSIGHTS_CONNECTION_STRING"             = format("InstrumentationKey=%s", azurerm_application_insights.main.instrumentation_key),
     "FUNCTIONS_WORKER_RUNTIME"                          = "dotnet",
-    "ConnectionStringStorageAccount"                    = format("@Microsoft.KeyVault(SecretUri=%s)",azurerm_key_vault_secret.main_ste_primary_key.id)
+    "ConnectionStringStorageAccount"                    = format("@Microsoft.KeyVault(SecretUri=%s)",azurerm_key_vault_secret.main_ste_primary_connection_string.id),
+    "ServiceBusConnection"                              = format("@Microsoft.KeyVault(SecretUri=%s)",azurerm_key_vault_secret.main_SB_primary_connection_string.id)
+
   }
   version="~3"
   tags = var.tags
 
 }
+ 
+
 resource "azurerm_role_assignment" "sbdo_ste_azfunc" {
   scope                = azurerm_storage_account.main.id
   role_definition_name = "Storage Blob Data Owner"
@@ -197,7 +210,8 @@ resource "azurerm_key_vault" "main" {
    
 }
 
-resource "azurerm_key_vault_secret" "main_ste_primary_key" {
+
+resource "azurerm_key_vault_secret" "main_ste_primary_connection_string" {
   name         = format("%s-primary-connection-string",azurerm_storage_account.main.name)
   value        = azurerm_storage_account.main.primary_connection_string
   key_vault_id = azurerm_key_vault.main.id
@@ -350,4 +364,23 @@ resource "azurerm_role_assignment" "sb_sbq_principal" {
   scope                = azurerm_servicebus_queue.main.id
   role_definition_name = "Azure Service Bus Data Owner"
   principal_id         = data.azurerm_client_config.current.object_id
+}
+
+resource "azurerm_key_vault_secret" "main_SB_primary_connection_string" {
+  name         = format("%s-primary-connection-string",azurerm_servicebus_namespace.main.name)
+  value        = azurerm_servicebus_namespace.main.default_primary_connection_string 
+  key_vault_id = azurerm_key_vault.main.id
+
+  tags = {
+    environment = "Dev"
+  }
+}
+resource "azurerm_key_vault_secret" "main_SB_secondary_connection_string" {
+  name         = format("%s-secondary-connection-string",azurerm_servicebus_namespace.main.name)
+  value        = azurerm_servicebus_namespace.main.default_secondary_connection_string 
+  key_vault_id = azurerm_key_vault.main.id
+
+  tags = {
+    environment = "Dev"
+  }
 }
